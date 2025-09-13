@@ -38,15 +38,13 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-        <div className="flex-1">
+      <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <div className="ml-64">
           <AdminHeader />
           <main className="p-6">
             {renderContent()}
           </main>
         </div>
       </div>
-    </div>
   );
 }
