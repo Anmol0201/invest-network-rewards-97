@@ -1,35 +1,39 @@
-import React, { useState } from 'react';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { AdminHeader } from '@/components/admin/AdminHeader';
-import { DashboardOverview } from '@/components/admin/DashboardOverview';
-import { UserManagement } from '@/components/admin/UserManagement';
-import { PlansManagement } from '@/components/admin/PlansManagement';
-import { EarningsAnalytics } from '@/components/admin/EarningsAnalytics';
-import { WithdrawalsManagement } from '@/components/admin/WithdrawalsManagement';
-import { ReportsAnalytics } from '@/components/admin/ReportsAnalytics';
-import { ContentManagement } from '@/components/admin/ContentManagement';
-import { StaffManagement } from '@/components/admin/StaffManagement';
+import React, { useState } from "react";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { AdminHeader } from "@/components/admin/AdminHeader";
+import { DashboardOverview } from "@/components/admin/DashboardOverview";
+import UserManagement from "@/components/admin/UserManagement";
+import { PlansManagement } from "@/components/admin/PlansManagement";
+import { EarningsAnalytics } from "@/components/admin/EarningsAnalytics";
+import { WithdrawalsManagement } from "@/components/admin/WithdrawalsManagement";
+import { ReportsAnalytics } from "@/components/admin/ReportsAnalytics";
+import { ContentManagement } from "@/components/admin/ContentManagement";
+import { StaffManagement } from "@/components/admin/StaffManagement";
 
-export default function Admin() {
-  const [activeSection, setActiveSection] = useState('overview');
+interface AdminProps {
+  onLogout?: () => void;
+}
+
+export default function Admin({ onLogout }: AdminProps) {
+  const [activeSection, setActiveSection] = useState("overview");
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'overview':
+      case "overview":
         return <DashboardOverview />;
-      case 'users':
+      case "users":
         return <UserManagement />;
-      case 'plans':
+      case "plans":
         return <PlansManagement />;
-      case 'earnings':
+      case "earnings":
         return <EarningsAnalytics />;
-      case 'withdrawals':
+      case "withdrawals":
         return <WithdrawalsManagement />;
-      case 'reports':
+      case "reports":
         return <ReportsAnalytics />;
-      case 'content':
+      case "content":
         return <ContentManagement />;
-      case 'staff':
+      case "staff":
         return <StaffManagement />;
       default:
         return <DashboardOverview />;
@@ -38,13 +42,14 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <AdminSidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
       <div className="ml-64">
-          <AdminHeader />
-          <main className="p-6">
-            {renderContent()}
-          </main>
-        </div>
+        <AdminHeader onLogout={onLogout} />
+        <main className="p-6">{renderContent()}</main>
       </div>
+    </div>
   );
 }
