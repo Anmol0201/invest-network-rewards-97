@@ -52,10 +52,51 @@ export interface InvestmentPlan {
   id: string;
   name: string;
   price: number;
-  dailyEarning: number;
-  duration: number;
-  description: string;
+  dailyReturn: number;
+  weeklyReturn?: number;
+  monthlyReturn?: number;
+  validity: number;
+  maxWithdrawal: number;
+  features: string[];
+  levels?: number;
   isActive: boolean;
+  subscribers: number;
+  revenue: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlanStats {
+  totalPlans: number;
+  activePlans: number;
+  totalSubscribers: number;
+  totalRevenue: number;
+  avgDailyPayout: number;
+}
+
+export interface AdminPlansResponse {
+  plans: InvestmentPlan[];
+  stats: PlanStats;
+}
+
+export interface PlanAnalytics {
+  plan: InvestmentPlan;
+  analytics: {
+    totalSubscribers: number;
+    activeSubscribers: number;
+    completedSubscribers: number;
+    totalRevenue: number;
+    averageInvestmentAmount: number;
+    dailyEarningsPaid: number;
+    monthlyGrowth: string;
+  };
+  recentInvestments: Array<{
+    id: string;
+    userId: string;
+    investmentAmount: number;
+    status: string;
+    createdAt: string;
+  }>;
 }
 
 export class AdminService {
@@ -120,15 +161,12 @@ export class AdminService {
     }
   }
 
-  // Investment Plans
-  static async getInvestmentPlans(): Promise<InvestmentPlan[]> {
+  // Investment Plans - Updated for new API structure
+  static async getInvestmentPlans(): Promise<AdminPlansResponse> {
     try {
-      const response = await apiClient.get<{
-        plans: InvestmentPlan[];
-        total: number;
-      }>("/admin/plans");
+      const response = await apiClient.get<AdminPlansResponse>("/admin/plans");
       if (response.success && response.data) {
-        return response.data.plans;
+        return response.data;
       }
       throw new Error(response.message || "Failed to fetch investment plans");
     } catch (error) {
@@ -138,15 +176,17 @@ export class AdminService {
   }
 
   static async createInvestmentPlan(
-    planData: Omit<InvestmentPlan, "id">
+    planData: Omit<InvestmentPlan, "id" | "subscribers" | "revenue" | "createdAt" | "updatedAt">
   ): Promise<InvestmentPlan> {
     try {
-      const response = await apiClient.post<{ plan: InvestmentPlan }>(
+      const response = await apiClient.post<InvestmentPlan | { plan: InvestmentPlan }>(
         "/admin/plans",
         planData
       );
       if (response.success && response.data) {
-        return response.data.plan;
+        // Support both shapes: { data: { plan: {...} } } and { data: { ... } }
+        const data: any = response.data as any;
+        return (data.plan ?? data) as InvestmentPlan;
       }
       throw new Error(response.message || "Failed to create investment plan");
     } catch (error) {
@@ -160,12 +200,12 @@ export class AdminService {
     planData: Partial<InvestmentPlan>
   ): Promise<InvestmentPlan> {
     try {
-      const response = await apiClient.put<{ plan: InvestmentPlan }>(
+      const response = await apiClient.put<InvestmentPlan>(
         `/admin/plans/${planId}`,
         planData
       );
       if (response.success && response.data) {
-        return response.data.plan;
+        return response.data;
       }
       throw new Error(response.message || "Failed to update investment plan");
     } catch (error) {
@@ -188,19 +228,34 @@ export class AdminService {
 
   static async toggleInvestmentPlanStatus(
     planId: string
-  ): Promise<InvestmentPlan> {
+  ): Promise<{ id: string; isActive: boolean }> {
     try {
-      const response = await apiClient.put<{ plan: InvestmentPlan }>(
+      const response = await apiClient.put<{ id: string; isActive: boolean }>(
         `/admin/plans/${planId}/toggle`
       );
       if (response.success && response.data) {
-        return response.data.plan;
+        return response.data;
       }
       throw new Error(
         response.message || "Failed to toggle investment plan status"
       );
     } catch (error) {
       console.error("Error toggling investment plan status:", error);
+      throw error;
+    }
+  }
+
+  static async getPlanAnalytics(planId: string): Promise<PlanAnalytics> {
+    try {
+      const response = await apiClient.get<PlanAnalytics>(
+        `/admin/plans/${planId}/analytics`
+      );
+      if (response.success && response.data) {
+        return response.data;
+      }
+      throw new Error(response.message || "Failed to fetch plan analytics");
+    } catch (error) {
+      console.error("Error fetching plan analytics:", error);
       throw error;
     }
   }
