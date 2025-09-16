@@ -1,73 +1,198 @@
-# Welcome to your Lovable project
+# WeNews Admin Panel
 
-## Project info
+This is the admin panel frontend for the WeNews platform. It connects to the WeNews backend located in the `WeNews` directory to manage users, monitor platform activity, and handle administrative tasks.
 
-**URL**: https://lovable.dev/projects/0fb4a738-51eb-4ed9-8ccf-aed867bfb4dd
+## 🚀 Quick Start
 
-## How can I edit this code?
+### Prerequisites
 
-There are several ways of editing your application.
+1. **WeNews Backend Running**
 
-**Use Lovable**
+   ```bash
+   cd D:\Techori\wenews\WeNews\backend
+   npm install
+   npm start
+   ```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/0fb4a738-51eb-4ed9-8ccf-aed867bfb4dd) and start prompting.
+   Backend should be running on `http://localhost:5000`
 
-Changes made via Lovable will be committed automatically to this repo.
+2. **Frontend Setup**
+   ```bash
+   cd D:\Techori\wenews\invest-network-rewards-97
+   npm install
+   npm run dev
+   ```
+   Frontend will be available at `http://localhost:8080`
 
-**Use your preferred IDE**
+### Admin Login
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Use these credentials to access the admin panel:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Email:** `admin@wenews.com`
+- **Password:** `admin123`
 
-Follow these steps:
+## 📁 Project Structure
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/
+│   ├── admin/           # Admin panel components
+│   │   ├── DashboardOverview.tsx    # Real-time dashboard with WeNews data
+│   │   ├── UserManagement.tsx       # User management with Firebase integration
+│   │   ├── AdminHeader.tsx          # Header with logout functionality
+│   │   └── AdminSidebar.tsx         # Navigation sidebar
+│   ├── ui/              # Reusable UI components (shadcn/ui)
+│   └── Login.tsx        # Authentication component
+├── services/            # API service layer
+│   ├── adminService.ts  # Admin API functions for WeNews backend
+│   └── authService.ts   # Authentication with JWT tokens
+├── lib/
+│   └── api.ts           # Base API client with error handling
+└── pages/
+    └── Admin.tsx        # Main admin layout with authentication
 ```
 
-**Edit a file directly in GitHub**
+## ✅ Features
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 🎯 Dashboard Overview
 
-**Use GitHub Codespaces**
+- **Real-time Statistics**: Live user counts, revenue, subscriptions
+- **System Metrics**: Platform activity and engagement data
+- **Wallet Integration**: Financial overview from WeNews backend
+- **User Progress Tracking**: Level system and earnings
+- **Recent Activity Feed**: Latest platform activities
+- **Visual Analytics**: Charts for revenue, user growth, plan distribution
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 👥 User Management
 
-## What technologies are used for this project?
+- **Complete User Directory**: All users from WeNews Firebase database
+- **Advanced Filtering**: Search by name, email, status, role
+- **Role Management**: Promote/demote users between user/admin roles
+- **Real-time User Statistics**: Dynamic counts and metrics
+- **User Profile Details**: Wallet balance, earnings, levels, registration dates
 
-This project is built with:
+### 🔐 Authentication System
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Secure Login**: JWT-based authentication with WeNews backend
+- **Session Management**: Persistent login across browser sessions
+- **Auto-logout**: Automatic logout on token expiration
+- **Protected Routes**: Admin-only access control
 
-## How can I deploy this project?
+## 🔗 Backend Integration
 
-Simply open [Lovable](https://lovable.dev/projects/0fb4a738-51eb-4ed9-8ccf-aed867bfb4dd) and click on Share -> Publish.
+### API Endpoints
 
-## Can I connect a custom domain to my Lovable project?
+The admin panel integrates with these WeNews backend endpoints:
 
-Yes, you can!
+```
+POST /api/auth/login              # Admin authentication
+GET  /api/admin/stats             # Dashboard statistics
+GET  /api/admin/users             # User management data
+PUT  /api/admin/users/:id/role    # Update user roles
+GET  /api/dashboard/overview      # Dashboard overview data
+GET  /api/dashboard/stats         # Quick statistics
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Data Flow Architecture
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```
+Frontend Component → Service Layer → API Client → WeNews Backend → Firebase
+     ↑                                                                    ↓
+User Interface ← Formatted Data ← Response Processing ← API Response ← Database
+```
+
+## 🛠️ Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000/api
+VITE_APP_NAME=WeNews Admin Panel
+VITE_NODE_ENV=development
+```
+
+## 🏗️ Tech Stack
+
+- **Frontend Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Charts**: Recharts for data visualization
+- **Routing**: React Router DOM
+- **HTTP Client**: Fetch API with custom wrapper
+- **State Management**: React Hooks
+- **Backend**: Node.js + Express + Firebase (WeNews)
+
+## 🚨 Troubleshooting
+
+### Backend Connection Issues
+
+```bash
+# 1. Verify WeNews backend is running
+cd D:\Techori\wenews\WeNews\backend
+npm start
+
+# 2. Check backend health
+curl http://localhost:5000/api/health
+
+# 3. Verify environment variables
+echo $VITE_API_BASE_URL
+```
+
+### Authentication Problems
+
+- **Clear browser storage**: `localStorage.clear()`
+- **Check admin user exists** in WeNews Firebase database
+- **Verify backend auth endpoints** are responding
+
+### Data Loading Issues
+
+- **Check browser console** for API errors
+- **Inspect network tab** for failed requests
+- **Verify WeNews backend** APIs are accessible
+
+## 🎯 Development
+
+### Adding New Features
+
+1. **Create service functions** in appropriate service file
+2. **Add TypeScript interfaces** for data types
+3. **Build components** with loading states and error handling
+4. **Add routing** in `Admin.tsx` if needed
+5. **Update navigation** in `AdminSidebar.tsx`
+
+### Project Scripts
+
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run lint     # Run ESLint
+```
+
+## 📈 Future Enhancements
+
+### Planned Features
+
+- **Investment Plans Management**: Configure and monitor investment plans
+- **Earnings Analytics**: Detailed earnings reports and calculations
+- **Withdrawal Management**: Approval workflow for user withdrawals
+- **Content Management**: News articles and platform content
+- **Advanced Analytics**: User behavior tracking and insights
+- **Notification System**: Admin notifications and alerts
+- **Bulk Operations**: Mass user operations and data exports
+
+## 📝 Notes
+
+- This admin panel is designed to work exclusively with the WeNews backend
+- All data is sourced from the WeNews Firebase database
+- The project uses shadcn/ui for consistent design components
+- JWT tokens are stored in localStorage for session management
+- The admin panel automatically handles authentication state
+
+## 🤝 Contributing
+
+1. Ensure WeNews backend is running and accessible
+2. Follow TypeScript best practices
+3. Add proper error handling for all API calls
+4. Include loading states for async operations
+5. Use shadcn/ui components for consistency
