@@ -18,7 +18,7 @@ This is the admin panel frontend for the WeNews platform. It connects to the WeN
 
 2. **Frontend Setup**
    ```bash
-   cd D:\Techori\wenews\invest-network-rewards-97
+   cd D:\Techori\wenews\admin
    npm install
    npm run dev
    ```
