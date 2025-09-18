@@ -68,10 +68,10 @@ export function StaffManagement() {
       const qs = new URLSearchParams();
       if (selectedDepartment) qs.set('department', selectedDepartment);
       if (selectedStatus && selectedStatus !== 'all') qs.set('status', selectedStatus);
-      const res = await apiClient.get<{ data: Staff[]; pagination?: any }>(`/admin/staff?${qs.toString()}`);
+      const res = await apiClient.get<Staff[]>(`/admin/staff?${qs.toString()}`);
       if (res.success) {
         // Some fields may be Firestore Timestamps, normalize joinDate
-        const items = (res.data as any[]).map((s: any) => ({
+        const items = res.data.map((s: any) => ({
           ...s,
           joinDate: s.joinDate?.toDate ? s.joinDate.toDate().toISOString() : s.joinDate,
         }));

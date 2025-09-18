@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import AdminService from "@/services/adminService";
+import { apiClient } from "@/lib/api";
 
 // Data will be fetched from backend
 
@@ -52,57 +54,156 @@ export function ContentManagement() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const headers: any = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Create form state
+  const [contentType, setContentType] = useState<"news" | "ad" | "banner">("news");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [category, setCategory] = useState<
+    "technology" | "business" | "sports" | "entertainment" | "health" | "science" | "politics" | "world"
+  >("technology");
+  const [summary, setSummary] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const [newsRes, adsRes, bannersRes] = await Promise.all([
-          fetch("/api/news", { headers }),
-          fetch("/api/advertisements/active", { headers }),
-          fetch("/api/banners/active", { headers }),
-        ]);
+  const resetForm = () => {
+    setContentType("news");
+    setTitle("");
+    setContent("");
+    setCategory("technology");
+    setSummary("");
+    setImageUrl("");
+  };
 
-        if (!newsRes.ok) throw new Error("Failed to fetch news");
-        if (!adsRes.ok) throw new Error("Failed to fetch ads");
-        if (!bannersRes.ok) throw new Error("Failed to fetch banners");
+  const safeDate = (d: any) => {
+    try {
+      if (!d) return "";
+      if (typeof d === "string") return new Date(d).toLocaleDateString();
+      if (d?.seconds) return new Date(d.seconds * 1000).toLocaleDateString();
+      return new Date(d).toLocaleDateString();
+    } catch {
+      return String(d);
+    }
+  };
 
-        const newsJson = await newsRes.json();
-        const adsJson = await adsRes.json();
-        const bannersJson = await bannersRes.json();
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [newsRes, adsRes, bannersRes] = await Promise.all([
+        apiClient.get("/news"),
+        apiClient.get("/advertisements/active"),
+        apiClient.get("/banners/active"),
+      ]);
 
-        setNewsData(Array.isArray(newsJson) ? newsJson : newsJson.data || []);
-        setAdsData(Array.isArray(adsJson) ? adsJson : adsJson.data || []);
-        setBannersData(
-          Array.isArray(bannersJson) ? bannersJson : bannersJson.data || []
-        );
-        setError(null);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message || "Failed to load content");
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (!newsRes.success) throw new Error(newsRes.message || "Failed to fetch news");
+      if (!adsRes.success) throw new Error(adsRes.message || "Failed to fetch ads");
+      if (!bannersRes.success) throw new Error(bannersRes.message || "Failed to fetch banners");
 
-    fetchAll();
+      const news = (newsRes.data as any)?.news || (newsRes.data as any)?.data?.news || [];
+      const ads = (adsRes.data as any)?.advertisements || (adsRes.data as any)?.data?.advertisements || [];
+      const banners = (bannersRes.data as any)?.banners || (bannersRes.data as any)?.data?.banners || [];
+
+      setNewsData(Array.isArray(news) ? news : []);
+      setAdsData(Array.isArray(ads) ? ads : []);
+      setBannersData(Array.isArray(banners) ? banners : []);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load content");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
+
   const getStatusBadge = (status: string) => {
+    const s = (status || "").toLowerCase();
     switch (status) {
       case "Published":
+      case "published":
         return <Badge className="bg-green-100 text-green-800">Published</Badge>;
       case "Draft":
+      case "draft":
         return <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>;
       case "Active":
+      case "active":
         return <Badge className="bg-blue-100 text-blue-800">Active</Badge>;
       case "Inactive":
+      case "inactive":
         return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
+      case "paused":
+        return <Badge className="bg-yellow-100 text-yellow-800">Paused</Badge>;
+      case "completed":
+        return <Badge className="bg-gray-100 text-gray-800">Completed</Badge>;
+      case "expired":
+        return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge>{status || "-"}</Badge>;
+    }
+  };
+
+  const handleCreate = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!title.trim()) throw new Error("Title is required");
+
+      if (contentType === "news") {
+        const finalSummary = summary.trim() || content.trim().slice(0, 200);
+        if (!content.trim()) throw new Error("Content is required for news");
+        await AdminService.createNewsArticle({
+          title: title.trim(),
+          content: content.trim(),
+          summary: finalSummary,
+          author: { name: "Admin" },
+          category,
+          source: { name: "WeNews" },
+          language: "en",
+          status: "published",
+        });
+        await fetchAll();
+        resetForm();
+        setIsDialogOpen(false);
+        return;
+      }
+
+      if (contentType === "ad") {
+        // Minimal fields: title (required), description optional
+        const res = await apiClient.post("/advertisements", {
+          title: title.trim(),
+          description: content.trim() || undefined,
+          status: "active",
+          placement: "dashboard",
+          type: "banner",
+        });
+        if (!res.success) throw new Error(res.message || "Failed to create advertisement");
+        await fetchAll();
+        resetForm();
+        setIsDialogOpen(false);
+        return;
+      }
+
+      if (contentType === "banner") {
+        if (!imageUrl.trim()) throw new Error("Image URL is required for banner");
+        const res = await apiClient.post("/banners", {
+          title: title.trim(),
+          description: content.trim() || undefined,
+          imageUrl: imageUrl.trim(),
+          placement: "homepage",
+        });
+        if (!res.success) throw new Error(res.message || "Failed to create banner");
+        await fetchAll();
+        resetForm();
+        setIsDialogOpen(false);
+        return;
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to create content");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,45 +231,64 @@ export function ContentManagement() {
               <DialogTitle>Create New Content</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="contentType">Content Type</Label>
-                <Select>
+                <Select value={contentType} onValueChange={(v: any) => setContentType(v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select content type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="news">News Article</SelectItem>
                     <SelectItem value="ad">Advertisement</SelectItem>
-                    <SelectItem value="announcement">Announcement</SelectItem>
+                    <SelectItem value="banner">Banner</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
-                <Input id="title" placeholder="Enter content title" />
+                <Input id="title" placeholder="Enter content title" value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="content">Content</Label>
-                <Textarea
-                  id="content"
-                  placeholder="Enter content description"
-                  rows={6}
-                />
+                <Label htmlFor="content">{contentType === 'news' ? 'Content' : contentType === 'ad' ? 'Description' : 'Description (optional)'}</Label>
+                <Textarea id="content" placeholder={contentType === 'news' ? 'Enter article content' : 'Enter description'} rows={6} value={content} onChange={(e) => setContent(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="investment">Investment</SelectItem>
-                    <SelectItem value="announcement">Announcement</SelectItem>
-                    <SelectItem value="promotion">Promotion</SelectItem>
-                    <SelectItem value="news">News</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {contentType === 'news' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="summary">Summary</Label>
+                    <Input id="summary" placeholder="Short summary (<= 500 chars)" value={summary} onChange={(e) => setSummary(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Select value={category} onValueChange={(v: any) => setCategory(v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                        <SelectItem value="sports">Sports</SelectItem>
+                        <SelectItem value="entertainment">Entertainment</SelectItem>
+                        <SelectItem value="health">Health</SelectItem>
+                        <SelectItem value="science">Science</SelectItem>
+                        <SelectItem value="politics">Politics</SelectItem>
+                        <SelectItem value="world">World</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+              {contentType === 'banner' && (
+                <div className="space-y-2">
+                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Input id="imageUrl" placeholder="https://..." value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+                </div>
+              )}
               <div className="flex justify-end space-x-2">
                 <Button
                   variant="outline"
@@ -176,7 +296,7 @@ export function ContentManagement() {
                 >
                   Cancel
                 </Button>
-                <Button className="bg-orange-500 hover:bg-orange-600">
+                <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleCreate} disabled={loading}>
                   Create Content
                 </Button>
               </div>
@@ -286,15 +406,15 @@ export function ContentManagement() {
                   <TableRow key={article.id}>
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                        <img
-                          src={article.image}
-                          alt={article.title}
-                          className="w-12 h-12 object-cover rounded"
-                        />
+                        {article?.images?.[0] ? (
+                          <img src={article.images[0]} alt={article.title} className="w-12 h-12 object-cover rounded" />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded" />
+                        )}
                         <div>
                           <p className="font-medium">{article.title}</p>
                           <p className="text-sm text-gray-500 truncate max-w-xs">
-                            {article.content}
+                            {article.summary || article.content}
                           </p>
                         </div>
                       </div>
@@ -302,10 +422,10 @@ export function ContentManagement() {
                     <TableCell>
                       <Badge variant="outline">{article.category}</Badge>
                     </TableCell>
-                    <TableCell>{article.author}</TableCell>
-                    <TableCell>{article.publishDate}</TableCell>
-                    <TableCell>{article.views.toLocaleString()}</TableCell>
-                    <TableCell>{getStatusBadge(article.status)}</TableCell>
+                    <TableCell>{article?.author?.name || '-'}</TableCell>
+                    <TableCell>{safeDate(article?.publishDate)}</TableCell>
+                    <TableCell>{(article?.views ?? 0).toLocaleString?.() || String(article?.views ?? 0)}</TableCell>
+                    <TableCell>{getStatusBadge(article?.status)}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button variant="ghost" size="sm">

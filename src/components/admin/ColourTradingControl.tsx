@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,13 +26,17 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import AdminService from "@/services/adminService";
 
 export function ColourTradingControl() {
   const [selectedPlan, setSelectedPlan] = useState("₹10");
   const [winningColor, setWinningColor] = useState<string | null>(null);
   const [selectedWinner, setSelectedWinner] = useState<string | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
+  const [backendOptions, setBackendOptions] = useState<{ options: string[]; multipliers: any } | null>(null);
   const [revealHistory, setRevealHistory] = useState<any[]>([]);
+  const [round, setRound] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Sample data for colour trading
   const tradingStats = {
@@ -54,136 +58,43 @@ export function ColourTradingControl() {
     "₹250",
   ];
 
-  // Color data with rewards
-  const colorData = [
-    {
-      name: "Red",
-      value: 18,
-      color: "#EF4444",
-      bgColor: "bg-red-200",
-      textColor: "text-red-800",
-      borderColor: "border-red-300",
-      reward: "₹500",
-      emoji: "🔴",
-    },
-    {
-      name: "Blue",
-      value: 15,
-      color: "#3B82F6",
-      bgColor: "bg-blue-200",
-      textColor: "text-blue-800",
-      borderColor: "border-blue-300",
-      reward: "₹400",
-      emoji: "🔵",
-    },
-    {
-      name: "Green",
-      value: 13,
-      color: "#10B981",
-      bgColor: "bg-green-200",
-      textColor: "text-green-800",
-      borderColor: "border-green-300",
-      reward: "₹350",
-      emoji: "🟢",
-    },
-    {
-      name: "Yellow",
-      value: 11,
-      color: "#F59E0B",
-      bgColor: "bg-yellow-200",
-      textColor: "text-yellow-800",
-      borderColor: "border-yellow-300",
-      reward: "₹300",
-      emoji: "🟡",
-    },
-    {
-      name: "Orange",
-      value: 9,
-      color: "#F97316",
-      bgColor: "bg-orange-200",
-      textColor: "text-orange-800",
-      borderColor: "border-orange-300",
-      reward: "₹250",
-      emoji: "🟠",
-    },
-    {
-      name: "Pink",
-      value: 7,
-      color: "#EC4899",
-      bgColor: "bg-pink-200",
-      textColor: "text-pink-800",
-      borderColor: "border-pink-300",
-      reward: "₹200",
-      emoji: "🩷",
-    },
-    {
-      name: "Black",
-      value: 7,
-      color: "#1F2937",
-      bgColor: "bg-gray-800",
-      textColor: "text-white",
-      borderColor: "border-gray-700",
-      reward: "₹450",
-      emoji: "⚫",
-    },
-    {
-      name: "White",
-      value: 5,
-      color: "#F3F4F6",
-      bgColor: "bg-white",
-      textColor: "text-gray-800",
-      borderColor: "border-gray-300",
-      reward: "₹150",
-      emoji: "⚪",
-    },
-    {
-      name: "Violet",
-      value: 5,
-      color: "#8B5CF6",
-      bgColor: "bg-violet-200",
-      textColor: "text-violet-800",
-      borderColor: "border-violet-300",
-      reward: "₹320",
-      emoji: "🟣",
-    },
-    {
-      name: "Brown",
-      value: 3,
-      color: "#A16207",
-      bgColor: "bg-yellow-600",
-      textColor: "text-white",
-      borderColor: "border-yellow-700",
-      reward: "₹180",
-      emoji: "🤎",
-    },
-    {
-      name: "Cyan",
-      value: 3,
-      color: "#06B6D4",
-      bgColor: "bg-cyan-200",
-      textColor: "text-cyan-800",
-      borderColor: "border-cyan-300",
-      reward: "₹280",
-      emoji: "🟦",
-    },
-    {
-      name: "Gray",
-      value: 4,
-      color: "#6B7280",
-      bgColor: "bg-gray-400",
-      textColor: "text-white",
-      borderColor: "border-gray-500",
-      reward: "₹220",
-      emoji: "🔘",
-    },
-  ];
+  // Build color ui data from backend options
+  const colorData = useMemo(() => {
+    const opts = backendOptions?.options || [
+      'Red','Blue','Green','Yellow','Orange','Pink','Black','White','Violet','Brown','Cyan','Gray'
+    ];
+    const colorMap: Record<string, { color: string; bg: string; text: string; border: string; emoji: string }>= {
+      Red: { color:'#EF4444', bg:'bg-red-200', text:'text-red-800', border:'border-red-300', emoji:'🔴' },
+      Blue:{ color:'#3B82F6', bg:'bg-blue-200', text:'text-blue-800', border:'border-blue-300', emoji:'🔵' },
+      Green:{ color:'#10B981', bg:'bg-green-200', text:'text-green-800', border:'border-green-300', emoji:'🟢' },
+      Yellow:{ color:'#F59E0B', bg:'bg-yellow-200', text:'text-yellow-800', border:'border-yellow-300', emoji:'🟡' },
+      Orange:{ color:'#F97316', bg:'bg-orange-200', text:'text-orange-800', border:'border-orange-300', emoji:'🟠' },
+      Pink:{ color:'#EC4899', bg:'bg-pink-200', text:'text-pink-800', border:'border-pink-300', emoji:'🩷' },
+      Black:{ color:'#1F2937', bg:'bg-gray-800', text:'text-white', border:'border-gray-700', emoji:'⚫' },
+      White:{ color:'#F3F4F6', bg:'bg-white', text:'text-gray-800', border:'border-gray-300', emoji:'⚪' },
+      Violet:{ color:'#8B5CF6', bg:'bg-violet-200', text:'text-violet-800', border:'border-violet-300', emoji:'🟣' },
+      Brown:{ color:'#A16207', bg:'bg-yellow-600', text:'text-white', border:'border-yellow-700', emoji:'🤎' },
+      Cyan:{ color:'#06B6D4', bg:'bg-cyan-200', text:'text-cyan-800', border:'border-cyan-300', emoji:'🟦' },
+      Gray:{ color:'#6B7280', bg:'bg-gray-400', text:'text-white', border:'border-gray-500', emoji:'🔘' },
+    };
+    return opts.map((name) => ({
+      name,
+      value: 0,
+      color: colorMap[name]?.color || '#94a3b8',
+      bgColor: colorMap[name]?.bg || 'bg-slate-200',
+      textColor: colorMap[name]?.text || 'text-slate-800',
+      borderColor: colorMap[name]?.border || 'border-slate-300',
+      reward: '',
+      emoji: colorMap[name]?.emoji || '🎨',
+    }));
+  }, [backendOptions]);
 
-  // Color distribution data
-  const colorDistribution = colorData.map((item) => ({
+  // Color distribution data (placeholder values)
+  const colorDistribution = useMemo(() => colorData.map((item) => ({
     name: item.name,
-    value: item.value,
+    value: item.value || 1,
     color: item.color,
-  }));
+  })), [colorData]);
 
   // Colour trade count data for bar chart
   const colourTradeData = [
@@ -215,29 +126,27 @@ export function ColourTradingControl() {
 
   const handleConfirmWinner = async () => {
     if (!selectedWinner || winningColor) return;
-
-    setIsRevealing(true);
-
-    // Simulate reveal delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setWinningColor(selectedWinner);
-    setIsRevealing(false);
-
-    // Add to reveal history
-    const colorInfo = colorData.find((c) => c.name === selectedWinner);
-    const newReveal = {
-      id: Date.now(),
-      winningColor: selectedWinner,
-      reward: colorInfo?.reward || "₹0",
-      timestamp: new Date().toLocaleString(),
-      plan: selectedPlan,
-      emoji: colorInfo?.emoji || "🎁",
-      totalParticipants: Math.floor(Math.random() * 500) + 100,
-      totalPool: Math.floor(Math.random() * 50000) + 10000,
-    };
-
-    setRevealHistory((prev) => [newReveal, ...prev]);
+    if (!round?.id) return;
+    try {
+      setIsRevealing(true);
+      await AdminService.finalizeTradingRound(round.id, selectedWinner);
+      setWinningColor(selectedWinner);
+      setRevealHistory((prev) => [{
+        id: Date.now(),
+        winningColor: selectedWinner,
+        reward: '',
+        timestamp: new Date().toLocaleString(),
+        plan: selectedPlan,
+        emoji: colorData.find(c=>c.name===selectedWinner)?.emoji || '🎁',
+        totalParticipants: 0,
+        totalPool: 0,
+      }, ...prev]);
+      await fetchRound();
+    } catch (e) {
+      console.error('Finalize failed', e);
+    } finally {
+      setIsRevealing(false);
+    }
   };
 
   const handleResetRound = () => {
@@ -245,6 +154,46 @@ export function ColourTradingControl() {
     setSelectedWinner(null);
     setRevealHistory([]);
   };
+
+  const fetchOptions = async () => {
+    try {
+      const cfg = await AdminService.getTradingOptions('color');
+      setBackendOptions(cfg);
+    } catch (e) {
+      console.error('Failed to fetch options', e);
+    }
+  };
+
+  const fetchRound = async () => {
+    try {
+      setLoading(true);
+      const res = await AdminService.listTradingRounds({ gameType: 'color', status: 'open', limit: 1 });
+      const r = (res.rounds || [])[0] || null;
+      setRound(r);
+      setWinningColor(r?.status === 'settled' ? r?.winningOption ?? null : null);
+      setSelectedWinner(null);
+    } catch (e) {
+      console.error('Failed to load round', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createRound = async () => {
+    try {
+      const ends = new Date(Date.now() + 60 * 60 * 1000); // 1h from now
+      const payload: any = { gameType: 'color', endsAt: ends.toISOString(), status: 'open' };
+      await AdminService.createTradingRound(payload);
+      await fetchRound();
+    } catch (e) {
+      console.error('Create round failed', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchOptions();
+    fetchRound();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -259,13 +208,13 @@ export function ColourTradingControl() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={fetchRound}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700" size="sm">
+          <Button className="bg-green-600 hover:bg-green-700" size="sm" onClick={createRound}>
             <Download className="w-4 h-4 mr-2" />
-            Export Data
+            Create Round
           </Button>
         </div>
       </div>
@@ -482,12 +431,10 @@ export function ColourTradingControl() {
                 <h4 className="font-semibold text-gray-900">Round Status</h4>
                 <p className="text-sm text-gray-600">
                   {winningColor
-                    ? `Winner: ${winningColor} (${
-                        colorData.find((c) => c.name === winningColor)?.reward
-                      })`
+                    ? `Winner: ${winningColor}`
                     : selectedWinner
                     ? `Selected: ${selectedWinner} - Click "Confirm Winner" below the grid to reveal`
-                    : "Select a winning color from the grid"}
+                    : (round ? `Round #${round?.roundNumber} is active` : 'No active round. Click Create Round.')}
                 </p>
               </div>
 
@@ -496,17 +443,17 @@ export function ColourTradingControl() {
                   {selectedPlan} Plan
                 </div>
                 <div className="text-sm text-gray-600">
-                  {winningColor
+                  {round ? (winningColor
                     ? "Round Complete"
                     : selectedWinner
                     ? "Ready to Confirm"
-                    : "Round Active"}
+                    : "Round Active") : 'No Round'}
                 </div>
 
                 {/* Confirm / Reset actions moved here so the grid remains the
                       single interactive selection area. */}
                 <div className="mt-3">
-                  {!winningColor ? (
+                  {round && !winningColor ? (
                     <Button
                       onClick={handleConfirmWinner}
                       disabled={!selectedWinner || isRevealing}
@@ -526,14 +473,14 @@ export function ColourTradingControl() {
                     </Button>
                   ) : null}
 
-                  {winningColor ? (
+                  {round && winningColor ? (
                     <Button
                       onClick={handleResetRound}
                       variant="outline"
                       className="border-red-300 text-red-600 hover:bg-red-50 px-4 py-2"
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      Start New Round
+                      Clear Selection
                     </Button>
                   ) : null}
                 </div>

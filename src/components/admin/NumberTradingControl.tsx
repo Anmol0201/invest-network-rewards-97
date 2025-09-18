@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+import AdminService from "@/services/adminService";
 
 export function NumberTradingControl() {
   const [selectedPlan, setSelectedPlan] = useState("₹10");
@@ -36,6 +37,9 @@ export function NumberTradingControl() {
   const [revealHistory, setRevealHistory] = useState<
     Array<{ round: number; winner: number; timestamp: string }>
   >([]);
+  const [backendOptions, setBackendOptions] = useState<string[] | null>(null);
+  const [round, setRound] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Sample data for number trading
   const tradingStats = {
@@ -92,23 +96,49 @@ export function NumberTradingControl() {
     { number: 100, rank: 5, trades: 35 },
   ];
 
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      const [opts, rounds] = await Promise.all([
+        AdminService.getTradingOptions('number'),
+        AdminService.listTradingRounds({ gameType: 'number', status: 'open', limit: 1 }),
+      ]);
+      const options = (opts as any)?.options as string[];
+      setBackendOptions(options);
+      const r = (rounds as any).rounds?.[0] || null;
+      setRound(r);
+      setWinningNumber(r?.winningOption ? Number(r.winningOption) : null);
+    } catch (e) {
+      console.error('Failed to refresh number trading data', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { refresh(); }, []);
+
   const handleConfirmWinner = async () => {
     if (selectedWinner == null) return;
+    if (!round?.id) return;
     setIsRevealing(true);
-    // simulate server confirmation delay
-    await new Promise((r) => setTimeout(r, 800));
-    setWinningNumber(selectedWinner);
-    setRevealHistory((h) => [
-      {
-        round: h.length + 1,
-        winner: selectedWinner,
-        timestamp: new Date().toISOString(),
-      },
-      ...h,
-    ]);
-    setIsRevealing(false);
-    // clear selection
-    setSelectedWinner(null);
+    try {
+      await AdminService.finalizeTradingRound(round.id, selectedWinner);
+      setWinningNumber(selectedWinner);
+      setRevealHistory((h) => [
+        {
+          round: (round?.roundNumber ?? h.length + 1),
+          winner: selectedWinner,
+          timestamp: new Date().toISOString(),
+        },
+        ...h,
+      ]);
+      setSelectedWinner(null);
+      await refresh();
+    } catch (e) {
+      console.error('Finalize number round failed', e);
+    } finally {
+      setIsRevealing(false);
+    }
   };
 
   const handleResetRound = () => {
@@ -120,6 +150,25 @@ export function NumberTradingControl() {
   const handleToggleSelect = (num: number) => {
     setSelectedWinner((s) => (s === num ? null : num));
   };
+
+  const handleCreateRound = async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      const ends = new Date(now.getTime() + 60 * 60 * 1000);
+      await AdminService.createTradingRound({ gameType: 'number', startsAt: now.toISOString(), endsAt: ends.toISOString() });
+      await refresh();
+    } catch (e) {
+      console.error('Create number round failed', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const numberList = useMemo(() => {
+    const list = backendOptions || Array.from({ length: 100 }, (_, i) => String(i + 1));
+    return list.map((n) => Number(n)).sort((a, b) => a - b);
+  }, [backendOptions]);
 
   return (
     <div className="space-y-6">
@@ -134,11 +183,16 @@ export function NumberTradingControl() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+            {loading ? 'Refreshing...' : 'Refresh'}
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700" size="sm">
+          {!round && (
+            <Button className="bg-blue-600 hover:bg-blue-700" size="sm" onClick={handleCreateRound} disabled={loading}>
+              Create Round
+            </Button>
+          )}
+          <Button className="bg-green-600 hover:bg-green-700" size="sm" disabled>
             <Download className="w-4 h-4 mr-2" />
             Export Data
           </Button>
@@ -276,7 +330,7 @@ export function NumberTradingControl() {
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex-1">
               <div className="grid grid-cols-10 gap-2 mb-4">
-                {Array.from({ length: 100 }, (_, i) => i + 1).map((number) => {
+                {numberList.map((number) => {
                   const isWinner = winningNumber === number;
                   const isSelected = selectedWinner === number;
                   const baseClasses = `h-10 w-full text-xs font-medium`;
