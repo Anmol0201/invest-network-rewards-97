@@ -9,6 +9,8 @@ import { WithdrawalsManagement } from "@/components/admin/WithdrawalsManagement"
 import { ReportsAnalytics } from "@/components/admin/ReportsAnalytics";
 import { ContentManagement } from "@/components/admin/ContentManagement";
 import { StaffManagement } from "@/components/admin/StaffManagement";
+import { ColourTradingControl } from "@/components/admin/ColourTradingControl";
+import { NumberTradingControl } from "@/components/admin/NumberTradingControl";
 
 interface AdminProps {
   onLogout?: () => void;
@@ -21,6 +23,10 @@ export default function Admin({ onLogout }: AdminProps) {
     switch (activeSection) {
       case "overview":
         return <DashboardOverview />;
+      case "colour-trading":
+        return <ColourTradingControl />;
+      case "number-trading":
+        return <NumberTradingControl />;
       case "users":
         return <UserManagement />;
       case "plans":

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   LayoutDashboard,
   Users,
@@ -8,25 +8,32 @@ import {
   BarChart3,
   FileText,
   UserCog,
-  Shield
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  Shield,
+  Palette,
+  Hash,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AdminSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
 }
 
-export function AdminSidebar({ activeSection, onSectionChange }: AdminSidebarProps) {
+export function AdminSidebar({
+  activeSection,
+  onSectionChange,
+}: AdminSidebarProps) {
   const menuItems = [
-    { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
-    { id: 'users', label: 'User Management', icon: Users },
-    { id: 'plans', label: 'Plans & Subscriptions', icon: Target },
-    { id: 'earnings', label: 'Earnings Analytics', icon: TrendingUp },
-    { id: 'withdrawals', label: 'Withdrawals Management', icon: CreditCard },
-    { id: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
-    { id: 'content', label: 'Content Management', icon: FileText },
-    { id: 'staff', label: 'Staff Management', icon: UserCog }
+    { id: "overview", label: "Dashboard Overview", icon: LayoutDashboard },
+    { id: "colour-trading", label: "Colour Trading", icon: Palette },
+    { id: "number-trading", label: "Number Trading", icon: Hash },
+    { id: "users", label: "User Management", icon: Users },
+    { id: "plans", label: "Plans & Subscriptions", icon: Target },
+    { id: "earnings", label: "Earnings Analytics", icon: TrendingUp },
+    { id: "withdrawals", label: "Withdrawals Management", icon: CreditCard },
+    { id: "reports", label: "Reports & Analytics", icon: BarChart3 },
+    { id: "content", label: "Content Management", icon: FileText },
+    { id: "staff", label: "Staff Management", icon: UserCog },
   ];
 
   return (
@@ -40,7 +47,7 @@ export function AdminSidebar({ activeSection, onSectionChange }: AdminSidebarPro
           </div>
         </div>
       </div>
-      
+
       <nav className="p-4 space-y-2">
         {menuItems.map((item) => (
           <button
