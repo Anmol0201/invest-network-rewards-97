@@ -1,38 +1,150 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Users, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  TrendingUp,
+  DollarSign,
+  Users,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+  ArrowDownRight,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { apiClient } from "@/lib/api";
 
-const earningsData = [
-  { date: '2024-01', totalEarnings: 45000, userEarnings: 38000, adminProfit: 7000 },
-  { date: '2024-02', totalEarnings: 52000, userEarnings: 44000, adminProfit: 8000 },
-  { date: '2024-03', totalEarnings: 48000, userEarnings: 40000, adminProfit: 8000 },
-  { date: '2024-04', totalEarnings: 61000, userEarnings: 51000, adminProfit: 10000 },
-  { date: '2024-05', totalEarnings: 55000, userEarnings: 46000, adminProfit: 9000 },
-  { date: '2024-06', totalEarnings: 67000, userEarnings: 56000, adminProfit: 11000 },
-];
+interface EarningsData {
+  date: string;
+  totalEarnings: number;
+  userEarnings: number;
+  adminProfit: number;
+}
 
-const planEarnings = [
-  { plan: 'Base', earnings: 145000, color: '#FED7AA' },
-  { plan: 'Silver', earnings: 285000, color: '#F97316' },
-  { plan: 'Gold', earnings: 420000, color: '#EA580C' },
-  { plan: 'Diamond', earnings: 180000, color: '#DC2626' },
-];
+interface PlanEarning {
+  plan: string;
+  earnings: number;
+  color: string;
+}
+
+interface TopEarner {
+  name: string;
+  earnings: number;
+  plan: string;
+  level: string;
+}
+
+interface EarningsMetrics {
+  todayProfit: number;
+  todayChange: number;
+  weekProfit: number;
+  weekChange: number;
+  monthProfit: number;
+  monthChange: number;
+  activeEarners: number;
+  earnerChange: number;
+}
 
 export function EarningsAnalytics() {
+  const [earningsData, setEarningsData] = useState<EarningsData[]>([]);
+  const [planEarnings, setPlanEarnings] = useState<PlanEarning[]>([]);
+  const [topEarners, setTopEarners] = useState<TopEarner[]>([]);
+  const [metrics, setMetrics] = useState<EarningsMetrics>({
+    todayProfit: 0,
+    todayChange: 0,
+    weekProfit: 0,
+    weekChange: 0,
+    monthProfit: 0,
+    monthChange: 0,
+    activeEarners: 0,
+    earnerChange: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        // Fetch earnings analytics
+        const response = await apiClient.get<{
+          earningsData: EarningsData[];
+          planEarnings: PlanEarning[];
+          topEarners: TopEarner[];
+          keyMetrics: {
+            todayProfit: number;
+            todayChange: number;
+            weekProfit: number;
+            weekChange: number;
+            monthProfit: number;
+            monthChange: number;
+            activeEarners: number;
+            earnerChange: number;
+          };
+        }>("/admin/analytics/earnings");
+
+        if (response.success && response.data) {
+          setEarningsData(response.data.earningsData || []);
+          setPlanEarnings(response.data.planEarnings || []);
+          setTopEarners(response.data.topEarners || []);
+          setMetrics({
+            todayProfit: response.data.keyMetrics?.todayProfit || 0,
+            todayChange: response.data.keyMetrics?.todayChange || 0,
+            weekProfit: response.data.keyMetrics?.weekProfit || 0,
+            weekChange: response.data.keyMetrics?.weekChange || 0,
+            monthProfit: response.data.keyMetrics?.monthProfit || 0,
+            monthChange: response.data.keyMetrics?.monthChange || 0,
+            activeEarners: response.data.keyMetrics?.activeEarners || 0,
+            earnerChange: response.data.keyMetrics?.earnerChange || 0,
+          });
+        } else {
+          setError("Failed to load earnings data from server");
+        }
+      } catch (err) {
+        console.error("Error fetching earnings data:", err);
+        setError(
+          "Failed to connect to the server. Please check your connection and try again."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p>Loading earnings data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Earnings Analytics</h2>
-        <p className="text-gray-600">Monitor earnings distribution and profit analytics</p>
+        <p className="text-gray-600">
+          Monitor earnings distribution and profit analytics
+        </p>
       </div>
 
       {/* Key Metrics */}
@@ -42,58 +154,118 @@ export function EarningsAnalytics() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Today's Profit</p>
-                <p className="text-2xl font-bold text-green-600">₹12,450</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ₹{metrics.todayProfit.toLocaleString()}
+                </p>
                 <div className="flex items-center space-x-1 mt-1">
-                  <ArrowUpRight className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-500">+15%</span>
+                  {metrics.todayChange >= 0 ? (
+                    <>
+                      <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-500">
+                        +{metrics.todayChange}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="w-4 h-4 text-red-500" />
+                      <span className="text-sm text-red-500">
+                        {metrics.todayChange}%
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <DollarSign className="w-8 h-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">This Week's Profit</p>
-                <p className="text-2xl font-bold text-blue-600">₹78,320</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  ₹{metrics.weekProfit.toLocaleString()}
+                </p>
                 <div className="flex items-center space-x-1 mt-1">
-                  <ArrowUpRight className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-500">+8%</span>
+                  {metrics.weekChange >= 0 ? (
+                    <>
+                      <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-500">
+                        +{metrics.weekChange}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="w-4 h-4 text-red-500" />
+                      <span className="text-sm text-red-500">
+                        {metrics.weekChange}%
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <TrendingUp className="w-8 h-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">This Month's Profit</p>
-                <p className="text-2xl font-bold text-orange-600">₹2,84,560</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  ₹{metrics.monthProfit.toLocaleString()}
+                </p>
                 <div className="flex items-center space-x-1 mt-1">
-                  <ArrowDownRight className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-red-500">-3%</span>
+                  {metrics.monthChange >= 0 ? (
+                    <>
+                      <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-500">
+                        +{metrics.monthChange}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="w-4 h-4 text-red-500" />
+                      <span className="text-sm text-red-500">
+                        {metrics.monthChange}%
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <Calendar className="w-8 h-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Active Earners</p>
-                <p className="text-2xl font-bold text-purple-600">1,856</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {metrics.activeEarners.toLocaleString()}
+                </p>
                 <div className="flex items-center space-x-1 mt-1">
-                  <ArrowUpRight className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-500">+12%</span>
+                  {metrics.earnerChange >= 0 ? (
+                    <>
+                      <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-green-500">
+                        +{metrics.earnerChange}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="w-4 h-4 text-red-500" />
+                      <span className="text-sm text-red-500">
+                        {metrics.earnerChange}%
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <Users className="w-8 h-8 text-purple-600" />
@@ -115,17 +287,17 @@ export function EarningsAnalytics() {
                 <LineChart data={earningsData}>
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Line 
-                    type="monotone" 
-                    dataKey="totalEarnings" 
-                    stroke="#F97316" 
+                  <Line
+                    type="monotone"
+                    dataKey="totalEarnings"
+                    stroke="#F97316"
                     strokeWidth={3}
                     name="Total Earnings"
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="adminProfit" 
-                    stroke="#DC2626" 
+                  <Line
+                    type="monotone"
+                    dataKey="adminProfit"
+                    stroke="#DC2626"
                     strokeWidth={2}
                     name="Admin Profit"
                   />
@@ -150,7 +322,7 @@ export function EarningsAnalytics() {
                     cy="50%"
                     outerRadius={100}
                     dataKey="earnings"
-                    label={({ plan, value }) => `${plan}: ₹${(value/1000)}K`}
+                    label={({ plan, value }) => `${plan}: ₹${value / 1000}K`}
                   >
                     {planEarnings.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -176,8 +348,16 @@ export function EarningsAnalytics() {
                 <BarChart data={earningsData}>
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Bar dataKey="userEarnings" fill="#FED7AA" name="User Earnings" />
-                  <Bar dataKey="adminProfit" fill="#F97316" name="Admin Profit" />
+                  <Bar
+                    dataKey="userEarnings"
+                    fill="#FED7AA"
+                    name="User Earnings"
+                  />
+                  <Bar
+                    dataKey="adminProfit"
+                    fill="#F97316"
+                    name="Admin Profit"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -191,25 +371,36 @@ export function EarningsAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { name: 'Rajesh Kumar', earnings: 15640, plan: 'Diamond', level: 'Level 5' },
-                { name: 'Priya Sharma', earnings: 12850, plan: 'Gold', level: 'Level 4' },
-                { name: 'Amit Singh', earnings: 11240, plan: 'Gold', level: 'Level 3' },
-                { name: 'Sunita Devi', earnings: 9850, plan: 'Silver', level: 'Level 4' },
-                { name: 'Vikash Yadav', earnings: 8750, plan: 'Silver', level: 'Level 3' }
-              ].map((user, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              {(topEarners.length > 0
+                ? topEarners
+                : [
+                    {
+                      name: "No data available",
+                      earnings: 0,
+                      plan: "-",
+                      level: "-",
+                    },
+                  ]
+              ).map((user, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
                       {index + 1}
                     </div>
                     <div>
                       <p className="font-medium">{user.name}</p>
-                      <p className="text-sm text-gray-500">{user.plan} • {user.level}</p>
+                      <p className="text-sm text-gray-500">
+                        {user.plan} • {user.level}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-green-600">₹{user.earnings.toLocaleString()}</p>
+                    <p className="font-bold text-green-600">
+                      ₹{user.earnings.toLocaleString()}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -239,10 +430,22 @@ export function EarningsAnalytics() {
                 {earningsData.map((month, index) => (
                   <tr key={index} className="border-b hover:bg-gray-50">
                     <td className="p-3 font-medium">{month.date}</td>
-                    <td className="p-3 text-right">₹{month.totalEarnings.toLocaleString()}</td>
-                    <td className="p-3 text-right">₹{month.userEarnings.toLocaleString()}</td>
-                    <td className="p-3 text-right text-green-600 font-medium">₹{month.adminProfit.toLocaleString()}</td>
-                    <td className="p-3 text-right">{((month.adminProfit / month.totalEarnings) * 100).toFixed(1)}%</td>
+                    <td className="p-3 text-right">
+                      ₹{month.totalEarnings.toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right">
+                      ₹{month.userEarnings.toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right text-green-600 font-medium">
+                      ₹{month.adminProfit.toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right">
+                      {(
+                        (month.adminProfit / month.totalEarnings) *
+                        100
+                      ).toFixed(1)}
+                      %
+                    </td>
                   </tr>
                 ))}
               </tbody>

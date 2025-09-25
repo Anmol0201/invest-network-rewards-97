@@ -11,6 +11,7 @@ import { ContentManagement } from "@/components/admin/ContentManagement";
 import { StaffManagement } from "@/components/admin/StaffManagement";
 import { ColourTradingControl } from "@/components/admin/ColourTradingControl";
 import { NumberTradingControl } from "@/components/admin/NumberTradingControl";
+import { AdminProfile } from "@/components/admin/AdminProfile";
 
 interface AdminProps {
   onLogout?: () => void;
@@ -41,9 +42,16 @@ export default function Admin({ onLogout }: AdminProps) {
         return <ContentManagement />;
       case "staff":
         return <StaffManagement />;
+      case "profile":
+        return <AdminProfile />;
       default:
         return <DashboardOverview />;
     }
+  };
+
+  // Function to handle profile click
+  const handleProfileClick = () => {
+    setActiveSection("profile");
   };
 
   return (
@@ -53,7 +61,7 @@ export default function Admin({ onLogout }: AdminProps) {
         onSectionChange={setActiveSection}
       />
       <div className="ml-64">
-        <AdminHeader onLogout={onLogout} />
+        <AdminHeader onLogout={onLogout} onProfileClick={handleProfileClick} />
         <main className="p-6">{renderContent()}</main>
       </div>
     </div>

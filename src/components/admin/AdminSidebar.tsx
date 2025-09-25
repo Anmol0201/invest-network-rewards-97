@@ -11,6 +11,7 @@ import {
   Shield,
   Palette,
   Hash,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
